@@ -68,21 +68,27 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: 'gke-gcloud-auth-plugin'
 
       - name: Configure kubectl for GKE
         run: |
           gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
             --zone=${{ secrets.GKE_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }}
+          
+          # Verify connection
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Deploy to GKE
         run: |
           # Update backend deployment
-          kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
+          kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
           kubectl rollout status deployment/backend --timeout=5m
           
           # Update frontend deployment
-          kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
+          kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
           kubectl rollout status deployment/frontend --timeout=5m
           
           echo "✅ GKE deployment completed!"
