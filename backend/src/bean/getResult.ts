@@ -23,7 +23,7 @@ export const getResultAndData = async (result: Result<any>, res: Response) => {
   if (statusCode >= 400) {
     return res.status(statusCode).send({
       status: "FAIL",
-      error: message,
+      message: message,
     });
   }
 

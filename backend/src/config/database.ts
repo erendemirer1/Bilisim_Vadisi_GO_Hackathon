@@ -23,6 +23,17 @@ export const initializeDatabase = () => {
       )
     `);
 
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS doctors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fullname TEXT NOT NULL UNIQUE,
+        expertise TEXT NOT NULL
+      );
+      INSERT INTO doctors (fullname, expertise) VALUES ('Dr. Mehmet Öz', 'Nöroloji') ON CONFLICT DO NOTHING;
+      INSERT INTO doctors (fullname, expertise) VALUES ('Dr. Elif Demir', 'Dahiliye') ON CONFLICT DO NOTHING;
+      INSERT INTO doctors (fullname, expertise) VALUES ('Dr. Ayşe Yılmaz', 'Kardiyoloji') ON CONFLICT DO NOTHING;
+    `);
+
     console.log("✅ Database connection established");
   } catch (error) {
     console.error("❌ Error during database initialization:", error);

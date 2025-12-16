@@ -4,7 +4,7 @@ import { UserRepository } from "../repository/UserRepository.js";
 import { User } from "../entity/User.js";
 import { StatusCodes } from "http-status-codes";
 import Result from "../bean/Result.js";
-import validator, { isNumeric } from "validator";
+import validator from "validator";
 
 export class UserService {
   private userRepository: UserRepository;
@@ -24,16 +24,16 @@ export class UserService {
       );
     }
 
-    if (!validator.isAlpha(name) || !validator.isAlpha(surname)) {
+    if (!validator.isAlpha(name,'tr-TR') || !validator.isAlpha(surname, 'tr-TR')) {
       return new Result(
         StatusCodes.BAD_REQUEST,
         null,
-        "Invalid name or surname"
+        "İsim ve soyisim sadece harf içermelidir"
       );
     }
 
     if (!validator.isEmail(email)) {
-      return new Result(StatusCodes.BAD_REQUEST, null, "Invalid email");
+      return new Result(StatusCodes.BAD_REQUEST, {field: "email"}, "Yanlış email");
     }
 
     const phoneStr = String(phone);
@@ -42,20 +42,20 @@ export class UserService {
       phoneStr.length != 10 ||
       !phoneStr.startsWith("5")
     ) {
-      return new Result(StatusCodes.BAD_REQUEST, null, "Invalid phone number");
+      return new Result(StatusCodes.BAD_REQUEST, {field: "phone"}, "Yanlış telefon numarası");
     }
 
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
-      return new Result(StatusCodes.CONFLICT, null, "User already exists");
+      return new Result(StatusCodes.CONFLICT, {field: "email"}, "User zaten var");
     }
 
     const existingPhone = await this.userRepository.findByNumber(phone);
     if (existingPhone) {
       return new Result(
         StatusCodes.CONFLICT,
-        null,
-        "Phone number already exists"
+        {field: "phone"},
+        "Phone number zaten kayıtlı"
       );
     }
 
@@ -69,18 +69,18 @@ export class UserService {
       phone
     );
 
-    return new Result(StatusCodes.CREATED, {}, "User created successfully");
+    return new Result(StatusCodes.CREATED, {}, "User başarıyla oluşturuldu");
   }
 
   async login(phone: number, password: string): Promise<Result<any>> {
     const user = await this.userRepository.findByNumber(phone);
     if (!user) {
-      return new Result(StatusCodes.UNAUTHORIZED, null, "User not found!");
+      return new Result(StatusCodes.UNAUTHORIZED, null, "User bulunamadı!");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return new Result(StatusCodes.UNAUTHORIZED, null, "Wrong Password!");
+      return new Result(StatusCodes.UNAUTHORIZED, null, "Yanlış Şifre!");
     }
 
     const JWT_SECRET = process.env.JWT_SECRET || "batuhan";
@@ -93,11 +93,11 @@ export class UserService {
       },
       JWT_SECRET,
       {
-        expiresIn: "7d",
+        expiresIn: "30d",
       }
     );
 
-    return new Result(StatusCodes.OK, token, "Login successful");
+    return new Result(StatusCodes.OK, token, "Giriş başarılı");
   }
 
   async delete(phone: string): Promise<boolean> {
