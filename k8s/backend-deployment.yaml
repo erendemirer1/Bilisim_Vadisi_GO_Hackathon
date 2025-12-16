@@ -35,6 +35,8 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            - name: DATABASE_PATH
+              value: "/app/data/database.sqlite"
             # Redis configuration (Case 3)
             - name: REDIS_HOST
               value: "redis"
@@ -62,6 +64,9 @@ spec:
                 secretKeyRef:
                   name: backend-secret
                   key: JWT_SECRET
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
           readinessProbe:
             httpGet:
               path: /health
@@ -78,3 +83,6 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+      volumes:
+        - name: data
+          emptyDir: {}
