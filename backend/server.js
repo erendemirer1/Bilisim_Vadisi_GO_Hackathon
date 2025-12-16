@@ -3,7 +3,7 @@ const http = require("http");
 const PORT = process.env.PORT || 3000;
 
 // Monitoring metrics
-let metrics = {
+const metrics = {
   requestCount: 0,
   errorCount: 0,
   healthCheckCount: 0,
