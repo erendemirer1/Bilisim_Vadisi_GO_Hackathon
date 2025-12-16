@@ -60,7 +60,30 @@ jobs:
           cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
-      - name: Image scan summary
+      # Kubernetes Deployment (optional - uncomment when K8s cluster is ready)
+      # - name: Set up kubectl
+      #   uses: azure/setup-kubectl@v3
+      #   with:
+      #     version: 'latest'
+      #
+      # - name: Configure kubectl
+      #   run: |
+      #     mkdir -p $HOME/.kube
+      #     echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+      #
+      # - name: Deploy to Kubernetes
+      #   run: |
+      #     # Update backend deployment
+      #     kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
+      #     kubectl rollout status deployment/backend --timeout=5m
+      #     
+      #     # Update frontend deployment
+      #     kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
+      #     kubectl rollout status deployment/frontend --timeout=5m
+      #     
+      #     echo "✅ Kubernetes deployment completed!"
+
+      - name: Deployment summary
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "### Backend Image" >> $GITHUB_STEP_SUMMARY
@@ -71,11 +94,17 @@ jobs:
           echo "- **Repository:** ${{ env.FRONTEND_IMAGE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags:** latest, ${{ steps.version.outputs.VERSION }}, ${{ steps.version.outputs.DATE }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Image Versions" >> $GITHUB_STEP_SUMMARY
+          echo "- Version tag: \`${{ steps.version.outputs.VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Date tag: \`${{ steps.version.outputs.DATE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Deployment Commands" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "# Update Kubernetes deployment" >> $GITHUB_STEP_SUMMARY
           echo "kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl rollout status deployment/backend" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl rollout status deployment/frontend" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Notify deployment status
