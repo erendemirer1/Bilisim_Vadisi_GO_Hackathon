@@ -2,16 +2,6 @@ import { db } from "../config/database.js";
 import { User } from "../entity/User.js";
 
 export class UserRepository {
-  async findAll(): Promise<User[]> {
-    return db.prepare("SELECT * FROM users").all() as User[];
-  }
-
-  async findById(id: number): Promise<User | null> {
-    const stmt = db.prepare("SELECT * FROM users WHERE id = ?");
-    const user = stmt.get(id) as User | undefined;
-    return user || null;
-  }
-
   async findByEmail(email: string): Promise<User | null> {
     const stmt = db.prepare("SELECT * FROM users WHERE email = ?");
     const user = stmt.get(email) as User | undefined;
