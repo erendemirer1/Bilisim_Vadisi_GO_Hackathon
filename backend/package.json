@@ -12,7 +12,10 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,json,md}\""
   },
-  "keywords": ["api", "backend"],
+  "keywords": [
+    "api",
+    "backend"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {},

@@ -3,6 +3,7 @@
 ## Running Tests
 
 ### Backend Tests
+
 ```bash
 cd backend
 npm install
@@ -10,6 +11,7 @@ npm test
 ```
 
 ### Test Coverage
+
 ```bash
 npm test -- --coverage
 ```
@@ -22,6 +24,7 @@ npm test -- --coverage
 ## Writing Tests
 
 Example test:
+
 ```javascript
 describe("Feature Name", () => {
   test("should do something", () => {
