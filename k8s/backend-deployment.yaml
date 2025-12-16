@@ -22,6 +22,7 @@ spec:
       containers:
         - name: backend
           image: erendemirer1/backend:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
           resources:

@@ -38,3 +38,6 @@ build/
 .cache/
 tmp/
 temp/
+
+# Minikube binary
+minikube-linux-amd64

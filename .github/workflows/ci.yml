@@ -90,10 +90,3 @@ jobs:
           file: ./frontend/Dockerfile
           push: false
           tags: frontend:test
-          echo "Frontend CI step is running..."
-          ls -la frontend
-          # İleride:
-          # cd frontend
-          # npm install
-          # npm run build
-          # npm test
