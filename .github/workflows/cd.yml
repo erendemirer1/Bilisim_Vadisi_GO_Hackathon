@@ -15,6 +15,9 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
+    env:
+      HAS_GKE_SECRETS: ${{ secrets.GCP_SA_KEY != '' }}
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -62,19 +65,19 @@ jobs:
 
       # GKE Authentication and Deployment (optional - only if GKE secrets are configured)
       - name: Authenticate to Google Cloud
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.HAS_GKE_SECRETS == 'true'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.HAS_GKE_SECRETS == 'true'
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: 'gke-gcloud-auth-plugin'
 
       - name: Configure kubectl for GKE
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.HAS_GKE_SECRETS == 'true'
         run: |
           gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
             --zone=${{ secrets.GKE_ZONE }} \
@@ -85,7 +88,7 @@ jobs:
           kubectl get nodes
 
       - name: Deploy to GKE
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.HAS_GKE_SECRETS == 'true'
         run: |
           # Check if deployments exist, if not apply manifests
           if ! kubectl get deployment backend &> /dev/null; then
@@ -154,14 +157,14 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Verify deployment
-        if: ${{ secrets.GCP_SA_KEY != '' && success() }}
+        if: env.HAS_GKE_SECRETS == 'true' && success()
         run: |
           echo "✅ All deployments completed successfully!"
           kubectl get pods -l app=backend
           kubectl get pods -l app=frontend
           
       - name: Deployment failed notification
-        if: ${{ secrets.GCP_SA_KEY != '' && failure() }}
+        if: env.HAS_GKE_SECRETS == 'true' && failure()
         run: |
           echo "❌ Deployment failed! Check the logs above."
           exit 1
