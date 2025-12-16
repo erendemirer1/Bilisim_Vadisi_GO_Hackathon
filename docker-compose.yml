@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: hack-backend
+    ports:
+      - "3000:3000"
+    # İleride environment, network vs burada olacak
+
+  frontend:
+    build: ./frontend
+    container_name: hack-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
