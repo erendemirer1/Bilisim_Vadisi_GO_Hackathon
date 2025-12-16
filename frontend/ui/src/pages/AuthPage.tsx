@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { Button, Input } from "../components/ui";
+import { useNavigate } from "react-router-dom";
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const [errors, setErrors] = useState<{
     email?: string;
@@ -13,56 +18,97 @@ const AuthPage = () => {
     phone?: string;
   }>({});
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrors({});
 
     const form = e.target as HTMLFormElement;
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
+    const phone = (form.elements.namedItem("phone") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement)
       .value;
 
     let name = "";
     let surname = "";
-    let phone = "";
+    let email = "";
     if (!isLogin) {
       name = (form.elements.namedItem("name") as HTMLInputElement)?.value;
       surname = (form.elements.namedItem("surname") as HTMLInputElement)?.value;
-      phone = (form.elements.namedItem("phone") as HTMLInputElement)?.value;
+      email = (form.elements.namedItem("email") as HTMLInputElement)?.value;
     }
 
-    setTimeout(() => {
-      const newErrors: typeof errors = {};
+    const newErrors: typeof errors = {};
 
+    if (password.length < 6) {
+      newErrors.password = "Şifre en az 6 karakter olmalıdır.";
+    }
+
+    if (!isLogin) {
+      if (!name || name.length < 3) {
+        newErrors.name = "Ad Soyad en az 3 karakter olmalıdır.";
+      }
+      if (!surname || surname.length < 2) {
+        newErrors.surname = "Ad Soyad en az 2 karakter olmalıdır.";
+      }
+      if (!phone || phone.length < 10) {
+        newErrors.phone = "Geçerli bir telefon numarası giriniz.";
+      }
       if (!email || !email.includes("@")) {
         newErrors.email = "Geçerli bir e-posta adresi giriniz.";
       }
-      if (password.length < 6) {
-        newErrors.password = "Şifre en az 6 karakter olmalıdır.";
-      }
+    }
 
-      if (!isLogin) {
-        if (!name || name.length < 3) {
-          newErrors.name = "Ad Soyad en az 3 karakter olmalıdır.";
-        }
-        if (!surname || surname.length < 2) {
-          newErrors.surname = "Ad Soyad en az 2 karakter olmalıdır.";
-        }
-        if (!phone || phone.length < 10) {
-          newErrors.phone = "Geçerli bir telefon numarası giriniz.";
-        }
-      }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setIsLoading(false);
+      return;
+    }
 
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        setIsLoading(false);
+    try {
+      const endpoint = isLogin ? "/login" : "/register";
+      const apiUrl = `${API_BASE_URL}${endpoint}`;
+
+      const payload = isLogin
+        ? { phone, password }
+        : { email, password, name, surname, phone };
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorField = data.data?.field;
+        const errorMessage = data.message;
+        if (errorField) {
+          setErrors({
+            [errorField]: errorMessage,
+          });
+        } else {
+          setGlobalError(errorMessage || "Beklenmedik bir hata oluştu.");
+        }
         return;
       }
 
-      alert(isLogin ? "Giriş Başarılı!" : "Kayıt Başarılı! Hoşgeldiniz.");
+      if (data.data) {
+        localStorage.setItem("authToken", data.data);
+      }
+      if (isLogin) navigate("/home");
+      else setIsLogin(!isLogin);
+    } catch (error: unknown) {
+      if (error) {
+        setGlobalError(
+          "Sunucuya erişilemiyor, lütfen internet bağlantınızı kontrol edin."
+        );
+      }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -88,6 +134,26 @@ const AuthPage = () => {
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
+            {globalError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                {globalError}
+              </div>
+            )}
             {!isLogin && (
               <>
                 <Input
@@ -156,6 +222,7 @@ const AuthPage = () => {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setErrors({});
+                setGlobalError("");
               }}
               className="text-blue-600 font-semibold hover:underline focus:outline-none cursor-pointer"
             >
@@ -165,7 +232,7 @@ const AuthPage = () => {
         </div>
 
         <p className="mt-8 text-xs text-center text-gray-400">
-          &copy; 2025 MediRandevu Sağlık Grubu. KVKK ve Gizlilik Politikası.
+          &copy; 2025 42 Klinik Sağlık Grubu. KVKK ve Gizlilik Politikası.
         </p>
       </div>
 
