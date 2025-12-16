@@ -9,13 +9,11 @@ RUN rm -rf ./*
 # Copy static files
 COPY ./index.html ./
 
-# Copy custom nginx config if exists
-COPY nginx.conf /etc/nginx/conf.d/default.conf 2>/dev/null || true
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Create non-root user
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S nginx -u 1001 && \
-    chown -R nginx:nginx /usr/share/nginx/html && \
+# Fix permissions for existing nginx user
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
     touch /var/run/nginx.pid && \

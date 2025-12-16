@@ -34,11 +34,11 @@ Thank you for considering contributing to this project. This guide will help you
 ```bash
 # Fork the repository
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/Bilisim_Vadisi_Hackathon.git
+git clone https://github.com/edemirer/Bilisim_Vadisi_GO_Hackathon.git
 cd Bilisim_Vadisi_Hackathon
 
 # Add upstream remote
-git remote add upstream https://github.com/erendemirer1/Bilisim_Vadisi_Hackathon.git
+git remote add upstream https://github.com/erendemirer1/Bilisim_Vadisi_GO_Hackathon.git
 
 # Install dependencies
 cd backend && npm install
