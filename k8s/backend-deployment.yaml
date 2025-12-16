@@ -19,10 +19,19 @@ spec:
       labels:
         app: backend
     spec:
+      initContainers:
+        - name: setup-permissions
+          image: busybox:1.36
+          command: ['sh', '-c', 'mkdir -p /data && chmod 777 /data']
+          volumeMounts:
+            - name: backend-storage
+              mountPath: /data
       containers:
         - name: backend
           image: erendemirer1/backend:latest
           imagePullPolicy: Always
+          workingDir: /data
+          command: ["sh", "-c", "cp -r /app/* /data/ 2>/dev/null || true && cd /data && node dist/server.js"]
           ports:
             - containerPort: 3000
           resources:
@@ -65,8 +74,8 @@ spec:
                   name: backend-secret
                   key: JWT_SECRET
           volumeMounts:
-            - name: data
-              mountPath: /app/data
+            - name: backend-storage
+              mountPath: /data
           readinessProbe:
             httpGet:
               path: /health
@@ -84,5 +93,17 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
       volumes:
-        - name: data
-          emptyDir: {}
+        - name: backend-storage
+          persistentVolumeClaim:
+            claimName: backend-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
