@@ -92,17 +92,19 @@ spec:
           requests:
             storage: 1Gi
 ---
-# ServiceMonitor for Prometheus scraping
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+# Redis Metrics Service (for Prometheus scraping)
+apiVersion: v1
+kind: Service
 metadata:
   name: redis-metrics
   labels:
     app: redis
+    metrics: "true"
 spec:
+  ports:
+    - port: 9121
+      targetPort: 9121
+      name: metrics
   selector:
-    matchLabels:
-      app: redis
-  endpoints:
-    - port: metrics
-      interval: 30s
+    app: redis
+  type: ClusterIP
