@@ -1,16 +1,27 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Service
 metadata:
   name: backend
   labels:
     app: backend
 spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30000
+  selector:
+    app: backend
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  serviceName: backend
+  replicas: 1  # SQLite = single instance only!
   selector:
     matchLabels:
       app: backend
@@ -19,25 +30,10 @@ spec:
       labels:
         app: backend
     spec:
-      initContainers:
-        - name: setup-db
-          image: erendemirer1/backend:latest
-          command: 
-            - 'sh'
-            - '-c'
-            - |
-              cp -r /app/* /data/ 2>/dev/null || true
-              touch /data/database.sqlite
-              chmod 666 /data/database.sqlite
-          volumeMounts:
-            - name: backend-storage
-              mountPath: /data
       containers:
         - name: backend
           image: erendemirer1/backend:latest
           imagePullPolicy: Always
-          workingDir: /data
-          command: ["node", "dist/server.js"]
           ports:
             - containerPort: 3000
           resources:
@@ -52,14 +48,12 @@ spec:
               value: "3000"
             - name: DATABASE_PATH
               value: "/data/database.sqlite"
-            - name: SQLITE_DB_PATH
-              value: "/data/database.sqlite"
-            # Redis configuration (Case 3)
+            # Redis configuration
             - name: REDIS_HOST
               value: "redis"
             - name: REDIS_PORT
               value: "6379"
-            # ConfigMap'ten gelen değerler
+            # ConfigMap values
             - name: NODE_ENV
               valueFrom:
                 configMapKeyRef:
@@ -70,7 +64,7 @@ spec:
                 configMapKeyRef:
                   name: backend-config
                   key: LOG_LEVEL
-            # Secret'tan gelen değerler
+            # Secret values
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -82,7 +76,7 @@ spec:
                   name: backend-secret
                   key: JWT_SECRET
           volumeMounts:
-            - name: backend-storage
+            - name: backend-data
               mountPath: /data
           readinessProbe:
             httpGet:
@@ -100,18 +94,11 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
-      volumes:
-        - name: backend-storage
-          persistentVolumeClaim:
-            claimName: backend-pvc
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: backend-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: backend-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
