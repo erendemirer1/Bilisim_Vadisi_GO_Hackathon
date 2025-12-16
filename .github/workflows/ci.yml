@@ -31,6 +31,15 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Start backend server
+        run: npm start &
+        env:
+          PORT: 3000
+
+      - name: Wait for server to be ready
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:3000/health; do sleep 1; done'
+
       - name: Run tests
         run: npm test
 
