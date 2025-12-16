@@ -111,12 +111,15 @@ jobs:
           echo "kubectl rollout status deployment/frontend" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-      - name: Notify deployment status
-        if: always()
+      - name: Verify deployment
+        if: success()
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment successful!"
-          else
-            echo "❌ Deployment failed!"
-            exit 1
-          fi
+          echo "✅ All deployments completed successfully!"
+          kubectl get pods -l app=backend
+          kubectl get pods -l app=frontend
+          
+      - name: Deployment failed notification
+        if: failure()
+        run: |
+          echo "❌ Deployment failed! Check the logs above."
+          exit 1
