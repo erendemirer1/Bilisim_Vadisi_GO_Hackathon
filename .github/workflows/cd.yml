@@ -60,18 +60,21 @@ jobs:
           cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
-      # GKE Authentication and Deployment
+      # GKE Authentication and Deployment (optional - only if GKE secrets are configured)
       - name: Authenticate to Google Cloud
+        if: ${{ secrets.GCP_SA_KEY != '' }}
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
+        if: ${{ secrets.GCP_SA_KEY != '' }}
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: 'gke-gcloud-auth-plugin'
 
       - name: Configure kubectl for GKE
+        if: ${{ secrets.GCP_SA_KEY != '' }}
         run: |
           gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
             --zone=${{ secrets.GKE_ZONE }} \
@@ -82,6 +85,7 @@ jobs:
           kubectl get nodes
 
       - name: Deploy to GKE
+        if: ${{ secrets.GCP_SA_KEY != '' }}
         run: |
           # Check if deployments exist, if not apply manifests
           if ! kubectl get deployment backend &> /dev/null; then
@@ -150,14 +154,14 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Verify deployment
-        if: success()
+        if: ${{ secrets.GCP_SA_KEY != '' && success() }}
         run: |
           echo "✅ All deployments completed successfully!"
           kubectl get pods -l app=backend
           kubectl get pods -l app=frontend
           
       - name: Deployment failed notification
-        if: failure()
+        if: ${{ secrets.GCP_SA_KEY != '' && failure() }}
         run: |
           echo "❌ Deployment failed! Check the logs above."
           exit 1
