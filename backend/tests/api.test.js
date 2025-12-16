@@ -22,8 +22,6 @@ function makeRequest(options) {
 }
 
 describe("Backend API Tests", () => {
-  const BASE_URL = "http://localhost:3000";
-
   test("GET / should return backend status", async () => {
     const response = await makeRequest({
       hostname: "localhost",
