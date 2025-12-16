@@ -38,3 +38,12 @@ build/
 .cache/
 tmp/
 temp/
+
+
+./backend/node_modules
+./backend/.env
+./backend/dist
+
+backend/node_modules
+backend/.env
+backend/dist
