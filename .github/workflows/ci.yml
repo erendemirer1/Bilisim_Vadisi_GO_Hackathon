@@ -44,7 +44,7 @@ jobs:
         run: npm test
 
       - name: Check formatting
-        run: npm run format -- --check
+        run: npm run format:check
 
   frontend-ci:
     runs-on: ubuntu-latest
@@ -71,7 +71,7 @@ jobs:
         run: npm run lint:html
 
       - name: Check formatting
-        run: npm run format -- --check
+        run: npm run format:check
 
   docker-build:
     runs-on: ubuntu-latest
