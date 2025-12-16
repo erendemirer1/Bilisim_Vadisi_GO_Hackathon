@@ -83,12 +83,44 @@ jobs:
 
       - name: Deploy to GKE
         run: |
-          # Update backend deployment
-          kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
-          kubectl rollout status deployment/backend --timeout=5m
+          # Check if deployments exist, if not apply manifests
+          if ! kubectl get deployment backend &> /dev/null; then
+            echo "📦 First-time deployment detected. Applying all manifests..."
+            
+            # Apply ConfigMap and Secrets
+            kubectl apply -f k8s/configmap.yaml
+            kubectl apply -f k8s/secret.yaml
+            
+            # Deploy Redis
+            kubectl apply -f k8s/redis-deployment.yaml
+            
+            # Deploy backend and frontend
+            kubectl apply -f k8s/backend-deployment.yaml
+            kubectl apply -f k8s/backend-service.yaml
+            kubectl apply -f k8s/frontend-deployment.yaml
+            kubectl apply -f k8s/frontend-service.yaml
+            
+            # Apply HPA
+            kubectl apply -f k8s/hpa.yaml
+            
+            # Deploy monitoring and backup
+            kubectl apply -f k8s/lock-monitoring.yaml
+            kubectl apply -f k8s/performance-monitoring.yaml
+            kubectl apply -f k8s/backup-cronjob.yaml
+            
+            echo "✅ Initial deployment completed!"
+          else
+            echo "🔄 Updating existing deployments..."
+            
+            # Update backend deployment
+            kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
+            
+            # Update frontend deployment
+            kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
+          fi
           
-          # Update frontend deployment
-          kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
+          # Wait for rollout to complete
+          kubectl rollout status deployment/backend --timeout=5m
           kubectl rollout status deployment/frontend --timeout=5m
           
           echo "✅ GKE deployment completed!"
