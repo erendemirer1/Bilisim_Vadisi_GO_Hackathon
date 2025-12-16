@@ -13,6 +13,22 @@ scrape_configs:
           app: 'backend'
           environment: 'development'
 
+  # Redis metrics (Case 3)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          app: 'redis'
+          environment: 'development'
+
+  # Lock monitoring metrics (Case 3)
+  - job_name: 'lock-monitor'
+    static_configs:
+      - targets: ['lock-monitor:9150']
+        labels:
+          app: 'lock-monitor'
+          environment: 'development'
+
   # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
