@@ -62,7 +62,7 @@ Modern, cloud-native full-stack application with Docker containerization and Kub
 │   ├── Dockerfile              # Multi-stage Dockerfile
 │   ├── package.json            # Dependencies & scripts
 │   ├── jest.config.js          # Jest test config
-│   └── server.js               # Main application
+│   └── server.ts               # Main application
 ├── frontend/
 │   ├── .htmlhintrc             # HTML linting
 │   ├── .prettierrc.json        # Prettier config
