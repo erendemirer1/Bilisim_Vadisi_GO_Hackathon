@@ -25,6 +25,36 @@ services:
     networks:
       - app-network
 
+  # Redis for distributed locking (Case 3)
+  redis:
+    image: redis:7-alpine
+    container_name: hack-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Redis Exporter for Prometheus
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: hack-redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
   # Prometheus for metrics collection
   prometheus:
     image: prom/prometheus:latest
@@ -94,3 +124,4 @@ volumes:
   prometheus-data:
   grafana-data:
   loki-data:
+  redis-data:

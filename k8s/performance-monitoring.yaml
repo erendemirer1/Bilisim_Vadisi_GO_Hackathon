@@ -1,0 +1,175 @@
+---
+# Prometheus Alerting Rules (Case 3: Randevu performans izleme <3 sn)
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: appointment-performance-alerts
+  labels:
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: appointment_performance
+      interval: 30s
+      rules:
+        # Randevu API response time > 3 saniye
+        - alert: AppointmentResponseTimeSlow
+          expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{path=~"/api/appointments.*"}[5m])) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Appointment API response time > 3 seconds"
+            description: "95th percentile response time is {{ $value }}s (threshold: 3s)"
+        
+        # Lock bekleme süresi yüksek
+        - alert: LockWaitTimeHigh
+          expr: rate(lock_wait_duration_seconds_sum[5m]) / rate(lock_wait_duration_seconds_count[5m]) > 1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Lock wait time is high"
+            description: "Average lock wait time is {{ $value }}s"
+        
+        # Redis connection errors
+        - alert: RedisConnectionErrors
+          expr: rate(redis_connection_errors_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Redis connection errors detected"
+            description: "Redis is experiencing connection issues"
+        
+        # Backup job failed
+        - alert: BackupJobFailed
+          expr: kube_job_status_failed{job_name=~"redis-backup.*|db-backup.*"} > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Backup job failed"
+            description: "{{ $labels.job_name }} has failed"
+        
+        # High lock contention
+        - alert: HighLockContention
+          expr: rate(lock_acquisition_failures_total[5m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High lock contention detected"
+            description: "Lock failures: {{ $value }}/sec"
+        
+        # Redis memory usage
+        - alert: RedisHighMemory
+          expr: (redis_memory_used_bytes / redis_memory_max_bytes) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Redis memory usage is high"
+            description: "Redis memory usage is {{ $value | humanizePercentage }}"
+        
+        # Stuck locks
+        - alert: StuckLocksDetected
+          expr: stuck_locks_count > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Stuck locks detected"
+            description: "{{ $value }} locks are stuck for >30 seconds"
+        
+        # Redis down
+        - alert: RedisDown
+          expr: up{job="redis"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Redis is down"
+            description: "Redis instance is not responding"
+        
+        # Appointment queue length
+        - alert: AppointmentQueueTooLong
+          expr: appointment_queue_length > 100
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Appointment queue is too long"
+            description: "Queue length is {{ $value }} (threshold: 100)"
+---
+# Grafana Dashboard ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: appointment-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  appointment-performance.json: |
+    {
+      "dashboard": {
+        "title": "Appointment Performance (Case 3)",
+        "panels": [
+          {
+            "title": "API Response Time (p95)",
+            "targets": [{
+              "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{path=~\"/api/appointments.*\"}[5m]))"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "title": "Lock Wait Time",
+            "targets": [{
+              "expr": "rate(lock_wait_duration_seconds_sum[5m]) / rate(lock_wait_duration_seconds_count[5m])"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "title": "Redis Memory Usage",
+            "targets": [{
+              "expr": "(redis_memory_used_bytes / redis_memory_max_bytes) * 100"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "title": "Lock Contention Rate",
+            "targets": [{
+              "expr": "rate(lock_acquisition_failures_total[5m])"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "title": "Appointment Queue Length",
+            "targets": [{
+              "expr": "appointment_queue_length"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "title": "Backup Status",
+            "targets": [{
+              "expr": "time() - kube_job_status_completion_time{job_name=~\"redis-backup.*|db-backup.*\"}"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          },
+          {
+            "title": "Active Locks",
+            "targets": [{
+              "expr": "active_locks_count"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+          },
+          {
+            "title": "Stuck Locks",
+            "targets": [{
+              "expr": "stuck_locks_count"
+            }],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+          }
+        ]
+      }
+    }
