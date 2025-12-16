@@ -8,7 +8,6 @@ interface Doctor {
   name: string;
   specialty: string;
   image: string;
-  rating: number;
   availableSlots: string[]; // Örn: ["09:00", "09:30"]
 }
 
@@ -18,7 +17,6 @@ const DOCTORS: Doctor[] = [
     id: 1,
     name: "Dr. Ayşe Yılmaz",
     specialty: "Kardiyoloji",
-    rating: 4.9,
     image:
       "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=400&auto=format&fit=crop",
     availableSlots: ["09:00", "09:30", "11:00", "14:00", "14:30"],
@@ -27,7 +25,6 @@ const DOCTORS: Doctor[] = [
     id: 2,
     name: "Dr. Mehmet Öz",
     specialty: "Nöroloji",
-    rating: 4.8,
     image:
       "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=400&auto=format&fit=crop",
     availableSlots: ["10:00", "10:30", "15:00"],
@@ -36,24 +33,20 @@ const DOCTORS: Doctor[] = [
     id: 3,
     name: "Dr. Elif Demir",
     specialty: "Dahiliye",
-    rating: 4.7,
     image:
       "https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=400&auto=format&fit=crop",
     availableSlots: ["09:15", "11:45", "13:15", "16:00"],
   },
-  // ... daha fazla doktor eklenebilir
 ];
 
 const SPECIALTIES = ["Tümü", "Kardiyoloji", "Nöroloji", "Dahiliye", "Ortopedi"];
 
 const Dashboard = () => {
-  // State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("Tümü");
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
-  // Filtreleme Mantığı
   const filteredDoctors = DOCTORS.filter((doc) => {
     const matchesSearch = doc.name
       .toLowerCase()
@@ -63,23 +56,19 @@ const Dashboard = () => {
     return matchesSearch && matchesSpecialty;
   });
 
-  // Randevu Onaylama
   const handleBookAppointment = () => {
     if (!selectedSlot || !selectedDoctor) return;
 
-    // API İsteği burada atılacak
     alert(
       `${selectedDoctor.name} için ${selectedSlot} saatine randevunuz oluşturuldu!`
     );
 
-    // Temizlik
     setSelectedDoctor(null);
     setSelectedSlot(null);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 1. Navbar / Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -156,9 +145,6 @@ const Dashboard = () => {
                   alt={doctor.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-700 flex items-center gap-1">
-                  ⭐ {doctor.rating}
-                </div>
               </div>
 
               <div className="p-5 flex-1 flex flex-col">

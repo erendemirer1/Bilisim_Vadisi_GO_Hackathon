@@ -1,7 +1,6 @@
 import React, { forwardRef } from "react";
 import { cn } from "../utils";
 
-// 1. Tipleri Tanımlayalım
 type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
@@ -11,7 +10,6 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
 }
 
-// 2. Component'i Oluşturalım
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -21,16 +19,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       isLoading,
       children,
       disabled,
-      type = "button", // Varsayılan olarak form submit etmesin
+      type = "button",
       ...props
     },
     ref
   ) => {
-    // Temel Stiller
     const baseStyles =
       "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
 
-    // Varyasyonlar (Renkler)
     const variants = {
       primary:
         "bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-600",
@@ -43,7 +39,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",
     };
 
-    // Boyutlar
     const sizes = {
       sm: "h-8 px-3 text-xs",
       md: "h-10 px-4 py-2 text-sm",
