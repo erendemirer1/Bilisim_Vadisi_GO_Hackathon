@@ -8,7 +8,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Install all dependencies (including devDependencies for TypeScript)
-RUN npm ci
+RUN npm install
 
 # Copy application code
 COPY . .
@@ -27,7 +27,7 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Copy only production dependencies
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy built JavaScript files
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
