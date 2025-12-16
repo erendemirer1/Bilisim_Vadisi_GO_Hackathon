@@ -19,7 +19,6 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Dışarı tıklandığında veya ESC basıldığında kapat
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -34,7 +33,7 @@ export const Modal: React.FC<ModalProps> = ({
     if (isOpen) {
       document.addEventListener("keydown", handleKeyDown);
       document.addEventListener("mousedown", handleClickOutside);
-      document.body.style.overflow = "hidden"; // Scroll'u kilitle
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
@@ -52,15 +51,12 @@ export const Modal: React.FC<ModalProps> = ({
         ref={modalRef}
         className={cn(
           "bg-white rounded-xl shadow-2xl w-full relative max-h-[90vh] overflow-y-auto flex flex-col animate-in zoom-in-95 duration-200",
-          {
-            "max-w-sm": size === "sm",
-            "max-w-md": size === "md",
-            "max-w-2xl": size === "lg",
-            "max-w-4xl": size === "xl",
-          }
+          size === "sm" && "max-w-sm",
+          size === "md" && "max-w-md",
+          size === "lg" && "max-w-2xl",
+          size === "xl" && "max-w-4xl"
         )}
       >
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
           <button
@@ -84,7 +80,6 @@ export const Modal: React.FC<ModalProps> = ({
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6">{children}</div>
       </div>
     </div>,
