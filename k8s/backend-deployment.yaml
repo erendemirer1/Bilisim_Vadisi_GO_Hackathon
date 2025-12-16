@@ -35,6 +35,11 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            # Redis configuration (Case 3)
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
             # ConfigMap'ten gelen değerler
             - name: NODE_ENV
               valueFrom:
