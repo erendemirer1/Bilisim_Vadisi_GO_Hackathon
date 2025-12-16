@@ -60,28 +60,32 @@ jobs:
           cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
-      # Kubernetes Deployment (optional - uncomment when K8s cluster is ready)
-      # - name: Set up kubectl
-      #   uses: azure/setup-kubectl@v3
-      #   with:
-      #     version: 'latest'
-      #
-      # - name: Configure kubectl
-      #   run: |
-      #     mkdir -p $HOME/.kube
-      #     echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-      #
-      # - name: Deploy to Kubernetes
-      #   run: |
-      #     # Update backend deployment
-      #     kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
-      #     kubectl rollout status deployment/backend --timeout=5m
-      #     
-      #     # Update frontend deployment
-      #     kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
-      #     kubectl rollout status deployment/frontend --timeout=5m
-      #     
-      #     echo "✅ Kubernetes deployment completed!"
+      # GKE Authentication and Deployment
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure kubectl for GKE
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
+            --zone=${{ secrets.GKE_ZONE }} \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to GKE
+        run: |
+          # Update backend deployment
+          kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
+          kubectl rollout status deployment/backend --timeout=5m
+          
+          # Update frontend deployment
+          kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }} --record
+          kubectl rollout status deployment/frontend --timeout=5m
+          
+          echo "✅ GKE deployment completed!"
 
       - name: Deployment summary
         run: |
