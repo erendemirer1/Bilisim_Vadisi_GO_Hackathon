@@ -5,6 +5,7 @@ import { useFetch } from "../hooks/useFetch";
 import { UserMenu } from "../components/UserMenu";
 import { authRequest } from "../hooks/authRequest";
 import { useSnackbar } from "../context/SnackbarContext";
+import { AIChatWidget } from "../components/AIChatWidget";
 
 interface User {
   name: string;
@@ -424,6 +425,7 @@ const Home = () => {
           </div>
         )}
       </Modal>
+      <AIChatWidget />
     </div>
   );
 };
