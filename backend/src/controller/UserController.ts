@@ -16,7 +16,7 @@ export class UserController {
   public register = async (req: Request, res: Response): Promise<Result<any>> => {
     try {
       const result = await this.userService.register(req.body as User);
-      return getResult(result, res);
+      return getResultAndData(result, res);
     } catch (error: Error | any) {
       return getResult(new Result(StatusCodes.INTERNAL_SERVER_ERROR, null, error.message || "User failed to register"), res);
     }

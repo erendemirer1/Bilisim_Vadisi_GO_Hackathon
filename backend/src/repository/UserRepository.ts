@@ -14,10 +14,10 @@ export class UserRepository {
       .get(number) as User | null;
   }
 
-  async saveUser(email: string, password: string, name: string, surname: string, phone: number) {
+  async saveUser(email: string, password: string, name: string, surname: string, phone: number, isAdmin: boolean) {
     db
-      .prepare("INSERT INTO users (email, password, name, surname, phone) VALUES (?, ?, ?, ?, ?)")
-      .run(email, password, name, surname, phone);
+      .prepare("INSERT INTO users (email, password, name, surname, phone, isAdmin) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(email, password, name, surname, phone, isAdmin ? 1 : 0);
   }
 
   async delete(id: number) {

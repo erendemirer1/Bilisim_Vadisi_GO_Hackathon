@@ -14,7 +14,7 @@ export class UserService {
   }
 
   async register(user: User): Promise<Result<any>> {
-    const { email, password, name, surname, phone } = user;
+    const { email, password, name, surname, phone, isAdmin } = user;
 
     if (!email || !password || !name || !surname || !phone) {
       return new Result(
@@ -59,6 +59,10 @@ export class UserService {
       );
     }
 
+    if (password.length < 6) {
+      return new Result(StatusCodes.BAD_REQUEST, {}, "Şifre çok kısa!");
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await this.userRepository.saveUser(
@@ -66,7 +70,8 @@ export class UserService {
       hashedPassword,
       name,
       surname,
-      phone
+      phone,
+      isAdmin || false
     );
 
     return new Result(StatusCodes.CREATED, {}, "User başarıyla oluşturuldu");
@@ -75,12 +80,16 @@ export class UserService {
   async login(phone: number, password: string): Promise<Result<any>> {
     const user = await this.userRepository.findByNumber(phone);
     if (!user) {
-      return new Result(StatusCodes.UNAUTHORIZED, null, "User bulunamadı!");
+      return new Result(StatusCodes.UNAUTHORIZED, {field: "phone"}, "Kullanıcı bulunamadı!");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return new Result(StatusCodes.UNAUTHORIZED, null, "Yanlış Şifre!");
+      return new Result(StatusCodes.UNAUTHORIZED, {field: "password"}, "Yanlış Şifre!");
+    }
+
+    if (user.isAdmin) {
+      return new Result(StatusCodes.BAD_REQUEST, null, "Admin normal giriş yapamaz!");
     }
 
     const JWT_SECRET = process.env.JWT_SECRET || "batuhan";
@@ -90,6 +99,7 @@ export class UserService {
         name: user.name,
         surname: user.surname,
         phone: user.phone,
+        isAdmin: false,
       },
       JWT_SECRET,
       {
@@ -112,4 +122,3 @@ export class UserService {
     return result.changes > 0;
   }
 }
-

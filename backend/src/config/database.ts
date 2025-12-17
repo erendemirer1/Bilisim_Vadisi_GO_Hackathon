@@ -18,9 +18,15 @@ export const initializeDatabase = () => {
         name TEXT NOT NULL,
         surname TEXT NOT NULL,
         phone INTEGER UNIQUE NOT NULL,
+        isAdmin INTEGER DEFAULT 0,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
+      );
+      INSERT INTO users 
+        (id, email, password, name, surname, phone, isAdmin, createdAt, updatedAt) 
+        VALUES ('1', 'admin@admin.com', '$2b$10$PrPefOFCEWd4DV6rphh.We3wNwvcGuVSR1KHN/SL9NOCLhtH2km22', 
+                'Admin', 'User', 5396415255, 1,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING;
     `);
 
     db.exec(`
