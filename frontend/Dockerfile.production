@@ -12,10 +12,7 @@ RUN npm install
 # Copy source code
 COPY ui/ ./
 
-# Set environment variable for build
-ENV VITE_BACKEND_URL=/api
-
-# Build the React app
+# Build the app
 RUN npm run build
 
 # Production stage

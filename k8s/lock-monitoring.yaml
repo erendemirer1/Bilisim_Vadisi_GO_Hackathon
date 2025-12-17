@@ -1,0 +1,164 @@
+---
+# Lock Monitoring Deployment (Case 3: Kilit voltajı izleme)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lock-monitor-script
+data:
+  monitor.sh: |
+    #!/bin/sh
+    set -e
+    
+    echo "🔍 Starting lock monitor..."
+    
+    while true; do
+      # Redis bağlantısını kontrol et
+      if ! redis-cli -h redis ping > /dev/null 2>&1; then
+        echo "⚠️ Redis unavailable, setting metrics to 0"
+        cat > /metrics/locks.prom <<'LOCKEOF'
+    # HELP active_locks_count Number of active locks in Redis
+    # TYPE active_locks_count gauge
+    active_locks_count 0
+    
+    # HELP stuck_locks_count Number of locks stuck for >30s
+    # TYPE stuck_locks_count gauge
+    stuck_locks_count 0
+    
+    # HELP redis_available Redis availability status
+    # TYPE redis_available gauge
+    redis_available 0
+    
+    # HELP lock_monitor_last_check_timestamp Last check timestamp
+    # TYPE lock_monitor_last_check_timestamp gauge
+    lock_monitor_last_check_timestamp 0
+    LOCKEOF
+        sleep 15
+        continue
+      fi
+      
+      # Redis'teki aktif lock sayısı
+      ACTIVE_LOCKS=$(redis-cli -h redis KEYS "lock:*" 2>/dev/null | wc -l)
+      
+      # 30 saniyeden uzun süren stuck lock'ları kontrol et
+      STUCK_LOCKS=0
+      for key in $(redis-cli -h redis KEYS "lock:*" 2>/dev/null); do
+        TTL=$(redis-cli -h redis TTL "$key" 2>/dev/null || echo "-1")
+        # TTL > 30 saniye ise stuck olabilir
+        if [ "$TTL" -gt 30 ] 2>/dev/null; then
+          STUCK_LOCKS=$((STUCK_LOCKS + 1))
+        fi
+      done
+      
+      # Metrics'leri dosyaya yaz (nginx metrics exporter okuyacak)
+      cat > /metrics/locks.prom <<METRICSEOF
+    # HELP active_locks_count Number of active locks in Redis
+    # TYPE active_locks_count gauge
+    active_locks_count $ACTIVE_LOCKS
+    
+    # HELP stuck_locks_count Number of locks stuck for >30s
+    # TYPE stuck_locks_count gauge
+    stuck_locks_count $STUCK_LOCKS
+    
+    # HELP redis_available Redis availability status
+    # TYPE redis_available gauge
+    redis_available 1
+    
+    # HELP lock_monitor_last_check_timestamp Last check timestamp
+    # TYPE lock_monitor_last_check_timestamp gauge
+    lock_monitor_last_check_timestamp $(date +%s)
+    METRICSEOF
+      
+      echo "✅ Metrics updated: active=$ACTIVE_LOCKS, stuck=$STUCK_LOCKS"
+      sleep 15
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lock-monitor
+  labels:
+    app: lock-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lock-monitor
+  template:
+    metadata:
+      labels:
+        app: lock-monitor
+    spec:
+      containers:
+        - name: monitor
+          image: redis:7-alpine
+          command: ["/bin/sh", "/scripts/monitor.sh"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+            - name: metrics
+              mountPath: /metrics
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "50m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+        
+        # Nginx için metrics exporter
+        - name: metrics-exporter
+          image: nginx:alpine
+          ports:
+            - containerPort: 9150
+              name: metrics
+          volumeMounts:
+            - name: metrics
+              mountPath: /usr/share/nginx/html
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "25m"
+            limits:
+              memory: "32Mi"
+              cpu: "50m"
+      
+      volumes:
+        - name: script
+          configMap:
+            name: lock-monitor-script
+            defaultMode: 0755
+        - name: metrics
+          emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: nginx-metrics-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-metrics-config
+data:
+  default.conf: |
+    server {
+      listen 9150;
+      location /metrics {
+        root /usr/share/nginx/html;
+        default_type text/plain;
+        try_files /locks.prom =404;
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lock-monitor
+  labels:
+    app: lock-monitor
+spec:
+  ports:
+    - port: 9150
+      name: metrics
+  selector:
+    app: lock-monitor

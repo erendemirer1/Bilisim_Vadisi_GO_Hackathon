@@ -14,7 +14,7 @@ export const middleware = (
 
     if (!authHeader) {
       res.status(StatusCodes.UNAUTHORIZED).json({
-        error: "Auth Header missing",
+        message: "Auth Header missing",
       });
       return;
     }
@@ -24,7 +24,7 @@ export const middleware = (
       : authHeader;
     if (!token) {
       res.status(StatusCodes.UNAUTHORIZED).json({
-        error: "No token provided",
+        message: "No token provided",
       });
     }
 
@@ -34,8 +34,51 @@ export const middleware = (
     }
   } catch (error) {
     res.status(StatusCodes.UNAUTHORIZED).json({
-      error: "Invalid or expired token",
+      message: "Invalid or expired token",
     });
   }
 };
+
+export const adminMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        message: "Auth Header missing",
+      });
+      return;
+    }
+
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
+    if (!token) {
+      res.status(StatusCodes.UNAUTHORIZED).json({
+        message: "Token bulunamadı",
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET as string);
+    if (decoded) {
+      const decodedObj = decoded as { isAdmin: boolean };
+      if (!decodedObj.isAdmin) {
+        res.status(StatusCodes.FORBIDDEN).json({
+          message: "Admin yetkisi gereklidir.",
+        });
+        return;
+      }
+      next();
+    }
+  } catch (error) {
+    res.status(StatusCodes.UNAUTHORIZED).json({
+      message: "Süresi geçmiş yada geçersiz token",
+    });
+  }
+};
+
 

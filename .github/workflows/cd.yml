@@ -15,6 +15,9 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
+    env:
+      HAS_GKE_SECRETS: ${{ secrets.GCP_SA_KEY != '' }}
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,7 +63,79 @@ jobs:
           cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
 
-      - name: Image scan summary
+      # GKE Authentication and Deployment (optional - only if GKE secrets are configured)
+      - name: Authenticate to Google Cloud
+        if: env.HAS_GKE_SECRETS == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        if: env.HAS_GKE_SECRETS == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: 'gke-gcloud-auth-plugin'
+
+      - name: Configure kubectl for GKE
+        if: env.HAS_GKE_SECRETS == 'true'
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} \
+            --zone=${{ secrets.GKE_ZONE }} \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+          
+          # Verify connection
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Deploy to GKE
+        if: env.HAS_GKE_SECRETS == 'true'
+        run: |
+          # Check if deployments exist, if not apply manifests
+          if ! kubectl get deployment backend &> /dev/null; then
+            echo "📦 First-time deployment detected. Applying all manifests..."
+            
+            # Apply ConfigMap and Secrets
+            kubectl apply -f k8s/configmap.yaml
+            kubectl apply -f k8s/secret.yaml
+            
+            # Deploy Redis
+            kubectl apply -f k8s/redis-deployment.yaml
+            
+            # Deploy backend and frontend
+            kubectl apply -f k8s/backend-deployment.yaml
+            kubectl apply -f k8s/backend-service.yaml
+            kubectl apply -f k8s/frontend-deployment.yaml
+            kubectl apply -f k8s/frontend-service.yaml
+            
+            # Apply HPA
+            kubectl apply -f k8s/hpa.yaml
+            
+            # Deploy monitoring and backup
+            kubectl apply -f k8s/lock-monitoring.yaml
+            kubectl apply -f k8s/performance-monitoring.yaml
+            kubectl apply -f k8s/backup-cronjob.yaml
+            
+            echo "✅ Initial deployment completed!"
+          else
+            echo "🔄 Updating existing deployments..."
+            
+            # Update backend deployment
+            kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
+            
+            # Update frontend deployment
+            kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }}
+          fi
+          
+          # Wait for rollout to complete (increased timeout)
+          echo "⏳ Waiting for backend rollout..."
+          kubectl rollout status deployment/backend --timeout=10m
+          
+          echo "⏳ Waiting for frontend rollout..."
+          kubectl rollout status deployment/frontend --timeout=10m
+          
+          echo "✅ GKE deployment completed!"
+
+      - name: Deployment summary
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "### Backend Image" >> $GITHUB_STEP_SUMMARY
@@ -71,19 +146,28 @@ jobs:
           echo "- **Repository:** ${{ env.FRONTEND_IMAGE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags:** latest, ${{ steps.version.outputs.VERSION }}, ${{ steps.version.outputs.DATE }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Image Versions" >> $GITHUB_STEP_SUMMARY
+          echo "- Version tag: \`${{ steps.version.outputs.VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Date tag: \`${{ steps.version.outputs.DATE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Deployment Commands" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "# Update Kubernetes deployment" >> $GITHUB_STEP_SUMMARY
           echo "kubectl set image deployment/backend backend=${{ env.BACKEND_IMAGE }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "kubectl set image deployment/frontend frontend=${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl rollout status deployment/backend" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl rollout status deployment/frontend" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-      - name: Notify deployment status
-        if: always()
+      - name: Verify deployment
+        if: env.HAS_GKE_SECRETS == 'true' && success()
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment successful!"
-          else
-            echo "❌ Deployment failed!"
-            exit 1
-          fi
+          echo "✅ All deployments completed successfully!"
+          kubectl get pods -l app=backend
+          kubectl get pods -l app=frontend
+          
+      - name: Deployment failed notification
+        if: env.HAS_GKE_SECRETS == 'true' && failure()
+        run: |
+          echo "❌ Deployment failed! Check the logs above."
+          exit 1

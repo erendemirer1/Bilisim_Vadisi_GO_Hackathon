@@ -1,0 +1,166 @@
+---
+# Redis Backup CronJob (Case 3: Redis yedekleme)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+spec:
+  schedule: "0 2 * * *"  # Her gün 02:00
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: redis:7-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  
+                  # Redis'in hazır olmasını bekle
+                  until redis-cli -h redis ping > /dev/null 2>&1; do
+                    echo "Waiting for Redis..."
+                    sleep 2
+                  done
+                  
+                  echo "Starting Redis backup..."
+                  
+                  # Redis BGSAVE komutu ile snapshot al
+                  redis-cli -h redis BGSAVE
+                  
+                  # BGSAVE'in bitmesini bekle
+                  while [ "$(redis-cli -h redis LASTSAVE)" = "$(redis-cli -h redis LASTSAVE)" ]; do
+                    sleep 1
+                  done
+                  
+                  # Backup dosyasını oluştur
+                  BACKUP_FILE="redis-backup-$(date +%Y%m%d-%H%M%S).rdb"
+                  
+                  # Redis pod'undan dump.rdb dosyasını kopyala
+                  # Not: Redis StatefulSet kullanıyor, pod adı: redis-0
+                  echo "Saving backup to: /backup/$BACKUP_FILE"
+                  redis-cli -h redis --rdb "/backup/$BACKUP_FILE" || echo "RDB export failed, trying alternative method"
+                  
+                  # Alternatif: Redis'e doğrudan bağlan ve veriyi al
+                  if [ ! -f "/backup/$BACKUP_FILE" ]; then
+                    redis-cli -h redis --raw DUMP > "/backup/$BACKUP_FILE" 2>/dev/null || true
+                  fi
+                  
+                  # 7 günden eski backup'ları sil
+                  find /backup -name "redis-backup-*.rdb" -mtime +7 -delete
+                  
+                  # Backup dosyası boyutunu göster
+                  if [ -f "/backup/$BACKUP_FILE" ]; then
+                    SIZE=$(du -h "/backup/$BACKUP_FILE" | cut -f1)
+                    echo "✅ Redis backup completed: $BACKUP_FILE (Size: $SIZE)"
+                    ls -lh /backup/
+                  else
+                    echo "⚠️ Warning: Backup file not created"
+                  fi
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "200m"
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: backup-storage
+---
+# Database Backup CronJob (Case 3: DB yedekleme)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+spec:
+  schedule: "30 2 * * *"  # Her gün 02:30
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: alpine:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  
+                  echo "Installing SQLite..."
+                  apk add --no-cache sqlite gzip
+                  
+                  echo "Starting database backup..."
+                  
+                  # Backup dosya adı
+                  BACKUP_FILE="db-backup-$(date +%Y%m%d-%H%M%S).db"
+                  
+                  # Database dosyasını kontrol et
+                  if [ ! -f "/data/database.db" ]; then
+                    echo "⚠️ Warning: Database file not found at /data/database.db"
+                    echo "Checking alternative locations..."
+                    find /data -name "*.db" -type f
+                    exit 0
+                  fi
+                  
+                  # SQLite backup komutu
+                  echo "Creating backup: $BACKUP_FILE"
+                  sqlite3 /data/database.db ".backup /backup/$BACKUP_FILE"
+                  
+                  # Backup'ı sıkıştır
+                  echo "Compressing backup..."
+                  gzip /backup/$BACKUP_FILE
+                  
+                  # 14 günden eski backup'ları sil
+                  echo "Cleaning old backups..."
+                  find /backup -name "db-backup-*.db.gz" -mtime +14 -delete
+                  
+                  # Backup bilgisi
+                  SIZE=$(du -h "/backup/$BACKUP_FILE.gz" | cut -f1)
+                  echo "✅ Database backup completed: $BACKUP_FILE.gz (Size: $SIZE)"
+                  echo "Available backups:"
+                  ls -lh /backup/
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+                - name: database
+                  mountPath: /data
+                  readOnly: true
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "200m"
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: backup-storage
+            - name: database
+              persistentVolumeClaim:
+                claimName: backend-pvc  # Backend PVC'den okuyacak
