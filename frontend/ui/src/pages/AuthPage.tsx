@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Input } from "../components/ui";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +10,9 @@ const AuthPage = () => {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (localStorage.getItem("authToken")) navigate("/home");
+  }, [navigate]);
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -180,7 +183,7 @@ const AuthPage = () => {
               name="phone"
               label="Telefon Numarası"
               type="tel"
-              placeholder="0555 555 55 55"
+              placeholder="555 555 55 55"
               error={errors.phone}
             />
 

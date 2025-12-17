@@ -1,11 +1,29 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { Button } from "../components/ui";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button, Loader } from "../components/ui";
+import { useFetch } from "../hooks/useFetch";
+import { UserMenu } from "../components/UserMenu";
 
+interface User {
+  name: string;
+  surname?: string;
+  email: string;
+}
+interface UserData {
+  message: string;
+  status: string;
+  data: User;
+}
 const Home = () => {
-  console.log(localStorage.getItem("authToken"));
-  const user = { name: "Ahmet Yılmaz" };
+  const navigate = useNavigate();
+  const { data: user, loading, error } = useFetch<UserData>("/validate");
 
+  useEffect(() => {
+    if (error) {
+      localStorage.removeItem("authToken");
+      navigate("/");
+    }
+  }, [error, navigate]);
   const nextAppointment = {
     exists: true,
     doctor: "Dr. Ayşe Yılmaz",
@@ -17,18 +35,26 @@ const Home = () => {
   };
 
   const popularDepartments = [
-    { name: "Dahiliye", icon: "🩺", color: "bg-blue-50 text-blue-600" },
+    {
+      name: "Dahiliye",
+      src: "assets/dahiliye.png",
+      color: "bg-blue-50 text-blue-600",
+    },
     {
       name: "Göz Hastalıkları",
-      icon: "👁️",
+      src: "assets/goz.png",
       color: "bg-green-50 text-green-600",
     },
     {
       name: "Diş Polikliniği",
-      icon: "🦷",
+      src: "assets/dis.png",
       color: "bg-orange-50 text-orange-600",
     },
-    { name: "KBB", icon: "👂", color: "bg-purple-50 text-purple-600" },
+    {
+      name: "KBB",
+      src: "assets/kbb.png",
+      color: "bg-purple-50 text-purple-600",
+    },
   ];
 
   const recentDoctors = [
@@ -47,18 +73,17 @@ const Home = () => {
         "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=100&q=80",
     },
   ];
-
+  useEffect(() => {}, []);
+  const logOut = () => {
+    localStorage.removeItem("authToken");
+    navigate("/");
+  };
+  if (loading) return <Loader />;
+  if (!user) return <div>No User</div>;
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100 pb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Merhaba, {user.name} 👋
-          </h1>
-          <p className="text-gray-500">
-            Randevularınızı planlamak için bugün harika bir gün.
-          </p>
-        </div>
+        <UserMenu user={user.data} onLogout={logOut} />
         <Link to="/doctor-search">
           <Button
             size="lg"
@@ -167,7 +192,7 @@ const Home = () => {
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${dept.color} group-hover:scale-110 transition-transform`}
                   >
-                    {dept.icon}
+                    <img src={`${dept.src}`} alt="" />
                   </div>
                   <span className="font-medium text-gray-700 group-hover:text-blue-600">
                     {dept.name}
