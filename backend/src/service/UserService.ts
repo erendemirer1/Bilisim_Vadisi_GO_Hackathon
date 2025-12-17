@@ -13,7 +13,7 @@ export class UserService {
     this.userRepository = new UserRepository();
   }
 
-  async register(user: User): Promise<Result<any>> {
+  public async register(user: User): Promise<Result<any>> {
     const { email, password, name, surname, phone, isAdmin } = user;
 
     if (!email || !password || !name || !surname || !phone) {
@@ -77,7 +77,7 @@ export class UserService {
     return new Result(StatusCodes.CREATED, {}, "User başarıyla oluşturuldu");
   }
 
-  async login(phone: number, password: string): Promise<Result<any>> {
+  public async login(phone: number, password: string): Promise<Result<any>> {
     const user = await this.userRepository.findByNumber(phone);
     if (!user) {
       return new Result(StatusCodes.UNAUTHORIZED, {field: "phone"}, "Kullanıcı bulunamadı!");
@@ -95,6 +95,7 @@ export class UserService {
     const JWT_SECRET = process.env.JWT_SECRET || "batuhan";
     const token = jwt.sign(
       {
+        id: user.id,
         email: user.email,
         name: user.name,
         surname: user.surname,
@@ -110,7 +111,7 @@ export class UserService {
     return new Result(StatusCodes.OK, token, "Giriş başarılı");
   }
 
-  async delete(phone: string): Promise<boolean> {
+  public async delete(phone: string): Promise<boolean> {
     let num;
     try {
       num = parseInt(phone);
@@ -120,5 +121,10 @@ export class UserService {
 
     const result = await this.userRepository.delete(num);
     return result.changes > 0;
+  }
+
+  public async getAllUsers(): Promise<Result<any>> {
+    const users = await this.userRepository.findAll();
+    return new Result(StatusCodes.OK, users, "Users retrieved successfully");
   }
 }

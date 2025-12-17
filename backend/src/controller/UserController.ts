@@ -66,4 +66,13 @@ export class UserController {
       return getResult(new Result(StatusCodes.UNAUTHORIZED, {}, "Invalid or expired token"), res);
     }
   };
+
+  public getAllUsers = async (req: Request, res: Response) => {
+    try {
+      const result = await this.userService.getAllUsers();
+      return getResultAndData(result, res);
+    } catch (error: Error | any) {
+      return getResult(new Result(StatusCodes.INTERNAL_SERVER_ERROR, null, error.message || "Users getirilemedi"), res);
+    }
+  }
 }
