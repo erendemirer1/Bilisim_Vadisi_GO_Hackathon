@@ -4,12 +4,24 @@ metadata:
   name: hackathon-ingress
   annotations:
     kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.global-static-ip-name: "hackathon-ip"
-    networking.gke.io/managed-certificates: "hackathon-cert"
 spec:
   rules:
     - http:
         paths:
+          - path: /prometheus/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+          - path: /grafana/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
           - path: /api/*
             pathType: ImplementationSpecific
             backend:

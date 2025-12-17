@@ -15,23 +15,23 @@ data:
       # Redis bağlantısını kontrol et
       if ! redis-cli -h redis ping > /dev/null 2>&1; then
         echo "⚠️ Redis unavailable, setting metrics to 0"
-        cat > /metrics/locks.prom <<EOF
-# HELP active_locks_count Number of active locks in Redis
-# TYPE active_locks_count gauge
-active_locks_count 0
-
-# HELP stuck_locks_count Number of locks stuck for >30s
-# TYPE stuck_locks_count gauge
-stuck_locks_count 0
-
-# HELP redis_available Redis availability status
-# TYPE redis_available gauge
-redis_available 0
-
-# HELP lock_monitor_last_check_timestamp Last check timestamp
-# TYPE lock_monitor_last_check_timestamp gauge
-lock_monitor_last_check_timestamp $(date +%s)
-EOF
+        cat > /metrics/locks.prom <<'LOCKEOF'
+    # HELP active_locks_count Number of active locks in Redis
+    # TYPE active_locks_count gauge
+    active_locks_count 0
+    
+    # HELP stuck_locks_count Number of locks stuck for >30s
+    # TYPE stuck_locks_count gauge
+    stuck_locks_count 0
+    
+    # HELP redis_available Redis availability status
+    # TYPE redis_available gauge
+    redis_available 0
+    
+    # HELP lock_monitor_last_check_timestamp Last check timestamp
+    # TYPE lock_monitor_last_check_timestamp gauge
+    lock_monitor_last_check_timestamp 0
+    LOCKEOF
         sleep 15
         continue
       fi
@@ -50,23 +50,23 @@ EOF
       done
       
       # Metrics'leri dosyaya yaz (nginx metrics exporter okuyacak)
-      cat > /metrics/locks.prom <<EOF
-# HELP active_locks_count Number of active locks in Redis
-# TYPE active_locks_count gauge
-active_locks_count $ACTIVE_LOCKS
-
-# HELP stuck_locks_count Number of locks stuck for >30s
-# TYPE stuck_locks_count gauge
-stuck_locks_count $STUCK_LOCKS
-
-# HELP redis_available Redis availability status
-# TYPE redis_available gauge
-redis_available 1
-
-# HELP lock_monitor_last_check_timestamp Last check timestamp
-# TYPE lock_monitor_last_check_timestamp gauge
-lock_monitor_last_check_timestamp $(date +%s)
-EOF
+      cat > /metrics/locks.prom <<METRICSEOF
+    # HELP active_locks_count Number of active locks in Redis
+    # TYPE active_locks_count gauge
+    active_locks_count $ACTIVE_LOCKS
+    
+    # HELP stuck_locks_count Number of locks stuck for >30s
+    # TYPE stuck_locks_count gauge
+    stuck_locks_count $STUCK_LOCKS
+    
+    # HELP redis_available Redis availability status
+    # TYPE redis_available gauge
+    redis_available 1
+    
+    # HELP lock_monitor_last_check_timestamp Last check timestamp
+    # TYPE lock_monitor_last_check_timestamp gauge
+    lock_monitor_last_check_timestamp $(date +%s)
+    METRICSEOF
       
       echo "✅ Metrics updated: active=$ACTIVE_LOCKS, stuck=$STUCK_LOCKS"
       sleep 15
