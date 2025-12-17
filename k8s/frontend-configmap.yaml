@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Backend API proxy
+        location /api/ {
+            proxy_pass http://backend:3000/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+        }
+
+        # Health check proxy - return JSON format
+        location /health {
+            default_type application/json;
+            return 200 '{"status":"OK","timestamp":"$time_iso8601","uptime":0}';
+        }
+
+        # Backend health check (actual)
+        location /backend-health {
+            proxy_pass http://backend:3000/health;
+        }
+
+        # Static files
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+  fix-html.sh: |
+    #!/bin/sh
+    set -e
+    echo "Fixing backend URL in index.html..."
+    cd /usr/share/nginx/html
+    
+    # Replace entire BACKEND_URL assignment block
+    sed -i '/const BACKEND_URL = hostname/,/: .http:\/\/localhost:30000./c\    const BACKEND_URL = "";' index.html
+    
+    echo "✅ Backend URL updated to use relative paths"
+    grep -A 1 "const BACKEND_URL" index.html
