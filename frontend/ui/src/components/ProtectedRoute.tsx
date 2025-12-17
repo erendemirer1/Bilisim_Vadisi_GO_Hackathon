@@ -14,7 +14,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const token = localStorage.getItem(tokenKey);
 
   if (!token) {
-    const redirectPath = requiredRole === "admin" ? "/admin/login" : "/";
+    const redirectPath = requiredRole === "admin" ? "/admin" : "/";
     return <Navigate to={redirectPath} replace />;
   }
 

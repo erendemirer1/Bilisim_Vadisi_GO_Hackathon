@@ -21,20 +21,26 @@ if (!JWT_SECRET) {
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   next();
 });
+
 app.use(express.json());
 app.use(userRoutes);
-app.use((req, res, next) => {
+app.use((req, res, _next) => {
   res.status(404).json({
     status: 'FAIL',
     message: `İstek attığınız yol (${req.originalUrl}) bu sunucuda bulunamadı.`,
     timestamp: new Date().toISOString()
   });
 });
-app.use((err: any, res: any) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Sunucu Hatası:', err);
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({

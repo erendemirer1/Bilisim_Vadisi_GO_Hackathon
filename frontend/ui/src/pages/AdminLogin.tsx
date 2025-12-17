@@ -32,7 +32,7 @@ const AdminLogin = () => {
         throw new Error(data.message || "Giriş başarısız.");
       }
 
-      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminToken", data.data);
 
       navigate("/admin/dashboard");
     } catch (err: unknown) {
