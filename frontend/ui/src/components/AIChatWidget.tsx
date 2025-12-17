@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; // Yönlendirme için
 import { Button } from "./ui";
 
-const VITE_AI_URL = import.meta.env.VITE_AI_URL + "/input";
+const VITE_AI_URL = "34.118.238.108" + "/input";
 
 // UI içinde kullanacağımız mesaj yapısı
 interface ChatMessage {
@@ -58,7 +58,7 @@ export const AIChatWidget = () => {
 
     try {
       // 2. API İsteği
-      const response = await fetch(`${VITE_AI_URL}`, {
+      const response = await fetch(`${"34.118.238.108"}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
