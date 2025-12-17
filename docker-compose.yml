@@ -8,6 +8,11 @@ services:
       - "3000:3000"
     environment:
       - ENABLE_CORS=true
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - backend-data:/app/src/config
+    depends_on:
+      - redis
     networks:
       - app-network
     labels:
@@ -125,3 +130,4 @@ volumes:
   grafana-data:
   loki-data:
   redis-data:
+  backend-data:
