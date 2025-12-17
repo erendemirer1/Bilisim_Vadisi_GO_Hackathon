@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, "../../database.sqlite");
 export const db = new Database(dbPath);
 
+db.pragma('foreign_keys = ON');
+
 export const initializeDatabase = () => {
   try {
     db.exec(`
@@ -38,6 +40,21 @@ export const initializeDatabase = () => {
       INSERT INTO doctors (fullname, expertise) VALUES ('Dr. Mehmet Öz', 'Nöroloji') ON CONFLICT DO NOTHING;
       INSERT INTO doctors (fullname, expertise) VALUES ('Dr. Elif Demir', 'Dahiliye') ON CONFLICT DO NOTHING;
       INSERT INTO doctors (fullname, expertise) VALUES ('Dr. Ayşe Yılmaz', 'Kardiyoloji') ON CONFLICT DO NOTHING;
+    `);
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        doctor_id INTEGER NOT NULL,
+        date TEXT NOT NULL, -- YYYY-MM-DD format
+        hour INTEGER NOT NULL, -- 24 hour format
+        status TEXT DEFAULT 'booked', -- booked, completed, cancelled
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
+        UNIQUE(doctor_id, date, hour)
+      );
     `);
 
     console.log("✅ Database connection established");

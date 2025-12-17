@@ -23,4 +23,8 @@ export class UserRepository {
   async delete(id: number) {
     return db.prepare("DELETE FROM users WHERE phone = ?").run(id);
   }
+
+  async findAll(): Promise<User[]> {
+    return db.prepare("SELECT id, email, name, surname, phone, isAdmin FROM users ORDER BY id ASC").all() as User[];
+  }
 }
