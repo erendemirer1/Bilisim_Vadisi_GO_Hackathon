@@ -26,9 +26,14 @@ spec:
             - 'sh'
             - '-c'
             - |
-              cp -r /app/* /data/ 2>/dev/null || true
-              touch /data/database.sqlite
+              # Eğer /data'da database yoksa, yeni bir tane oluştur
+              # Yeni database'i manuel olarak pod'a kopyalayacağız
+              if [ ! -f /data/database.sqlite ]; then
+                echo "Database bulunamadı, boş database oluşturuluyor..."
+                touch /data/database.sqlite
+              fi
               chmod 666 /data/database.sqlite
+              ls -lh /data/
           volumeMounts:
             - name: backend-storage
               mountPath: /data
