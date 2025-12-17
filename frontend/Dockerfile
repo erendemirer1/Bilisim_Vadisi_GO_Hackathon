@@ -15,6 +15,8 @@ COPY ui/ ./
 # Set environment variable for build
 ENV VITE_BACKEND_URL=/api
 
+ENV VITE_AI_URL=/api/ai
+
 # Build the React app
 RUN npm run build
 
